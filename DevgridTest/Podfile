@@ -1,0 +1,12 @@
+platform :ios, “10.0”
+use_frameworks!
+
+target 'DevgridTest' do
+ 
+pod 'Alamofire', ‘4’
+pod 'SwiftyJSON'
+pod 'SCLAlertView',:git => 'https://github.com/vikmeup/SCLAlertView-Swift.git'
+pod 'Kingfisher', '~> 4.0'
+pod 'NVActivityIndicatorView', '~> 4.0'
+
+end
