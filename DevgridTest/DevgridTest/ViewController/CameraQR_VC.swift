@@ -11,6 +11,7 @@
 //MARK: - • FRAMEWORK HEADERS
 import UIKit
 import AVFoundation
+import AudioToolbox
 
 //MARK: - • OTHERS IMPORTS
 
@@ -26,7 +27,7 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     //MARK: - • PUBLIC PROPERTIES
     var captureSession:AVCaptureSession?
     var videoPreviewLayer:AVCaptureVideoPreviewLayer?
-    let supportedCodeTypes = [AVMetadataObject.ObjectType.qr]
+    let supportedCodeTypes =  [AVMetadataObject.ObjectType.qr]
     //
     @IBOutlet weak var previewView:UIView!
     @IBOutlet weak var viewOfInterest:UIView!
@@ -65,6 +66,13 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
+        
+        
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        
+        self.checkCamPermission()
         self.setupLayout()
         
         // Get an instance of the AVCaptureDevice class to initialize a device object and provide the video as the media type parameter.
@@ -82,22 +90,21 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
             
             // Initialize a AVCaptureMetadataOutput object and set it as the output device to the capture session.
             let captureMetadataOutput = AVCaptureMetadataOutput()
-            captureMetadataOutput.rectOfInterest = viewOfInterest.frame
-            captureSession!.addOutput(captureMetadataOutput)
-            
+            captureMetadataOutput.rectOfInterest = self.view.frame //
             // Set delegate and use the default dispatch queue to execute the call back
             captureMetadataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
+            captureSession!.addOutput(captureMetadataOutput)
             captureMetadataOutput.metadataObjectTypes = supportedCodeTypes
-            
+           
             // Initialize the video preview layer and add it as a sublayer to the viewPreview view's layer.
             videoPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession!)
             videoPreviewLayer?.videoGravity = AVLayerVideoGravity.resizeAspectFill
-            videoPreviewLayer?.frame = view.layer.bounds
-            view.layer.addSublayer(videoPreviewLayer!)
+            videoPreviewLayer?.frame = previewView.layer.bounds
+            previewView.layer.addSublayer(videoPreviewLayer!)
+            previewView.bringSubviewToFront(viewOfInterest)
             
             // Start video capture.
             captureSession!.startRunning()
-        
             
         } catch {
             // If any error occurs, simply print it out and don't continue any more.
@@ -107,10 +114,10 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     }
     
     //MARK: - • INTERFACE/PROTOCOL METHODS
-    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputMetadataObjects metadataObjects: [Any]!, from connection: AVCaptureConnection!) {
+    func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
         
-        // Check if the metadataObjects array is not nil and it contains at least one object.
-        if metadataObjects == nil || metadataObjects.count == 0 {
+        // Check if the metadataObjects array contains at least one object.
+        if  metadataObjects.count  == 0 {
             previewView.frame = CGRect.zero
             return
         }
@@ -138,7 +145,7 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
                     gistId = metadataObj.stringValue
                     
                 }
-                
+                print(gistId as Any)
                 //TODO: CONNECTION
                 
             }
@@ -154,12 +161,16 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     //MARK: - • PRIVATE METHODS (INTERNAL USE ONLY)
     private func setupLayout() {
         
+        viewOfInterest.backgroundColor = nil
+        
         //creating the target on screen
         let width = previewView.frame.size.width * 0.8;
         let height = width;
         rectScanSizeWidthConstraint.constant = width;
         rectScanSizeHeightConstraint.constant = height;
         self.view.layoutIfNeeded()
+        
+        //viewOfInterest.layer.sublayers?.forEach {$0.removeFromSuperlayer()}
         
         let extHeight:CGFloat = previewView.frame.size.height;
         let extWidth:CGFloat = previewView.frame.size.width;
@@ -171,12 +182,12 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
         externalPath.append(internalPath)
         externalPath.usesEvenOddFillRule = true
         
-        let fillLayer = CAShapeLayer.init()
+        let fillLayer = CAShapeLayer()
         fillLayer.path = externalPath.cgPath
         fillLayer.fillRule = CAShapeLayerFillRule.evenOdd
         fillLayer.fillColor = UIColor.black.cgColor
         fillLayer.opacity = 0.5
-        viewOfInterest.layer .addSublayer(fillLayer)
+        viewOfInterest.layer.addSublayer(fillLayer)
         
         let borderPath = UIBezierPath()
         
