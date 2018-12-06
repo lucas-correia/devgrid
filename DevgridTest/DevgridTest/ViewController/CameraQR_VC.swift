@@ -65,6 +65,7 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
+        self.setupLayout()
         
         // Get an instance of the AVCaptureDevice class to initialize a device object and provide the video as the media type parameter.
         let captureDevice = AVCaptureDevice.default(for: AVMediaType.video)
@@ -81,7 +82,7 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
             
             // Initialize a AVCaptureMetadataOutput object and set it as the output device to the capture session.
             let captureMetadataOutput = AVCaptureMetadataOutput()
-            captureMetadataOutput.rectOfInterest = CGRect(x: 0, y: 0, width: imgCode.frame.width, height: imgCode.frame.height);
+            captureMetadataOutput.rectOfInterest = viewOfInterest.frame
             captureSession!.addOutput(captureMetadataOutput)
             
             // Set delegate and use the default dispatch queue to execute the call back
@@ -106,7 +107,43 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     }
     
     //MARK: - • INTERFACE/PROTOCOL METHODS
-    
+    func captureOutput(_ captureOutput: AVCaptureOutput!, didOutputMetadataObjects metadataObjects: [Any]!, from connection: AVCaptureConnection!) {
+        
+        // Check if the metadataObjects array is not nil and it contains at least one object.
+        if metadataObjects == nil || metadataObjects.count == 0 {
+            previewView.frame = CGRect.zero
+            return
+        }
+        
+        // Get the metadata object.
+        let metadataObj = metadataObjects[0] as! AVMetadataMachineReadableCodeObject
+        
+        if supportedCodeTypes.contains(metadataObj.type) {
+            // If the found metadata is equal to the QR code metadata then update the status and set the bounds
+            let barCodeObject = videoPreviewLayer?.transformedMetadataObject(for: metadataObj)
+            previewView?.frame = barCodeObject!.bounds
+            
+            if metadataObj.stringValue != nil {
+                AudioServicesPlayAlertSound(SystemSoundID(kSystemSoundID_Vibrate))
+                captureSession?.stopRunning()
+                
+                var gistId:String?
+                if(metadataObj.stringValue!.contains("gist.github.com")){
+                    
+                    let url = URL(string: metadataObj.stringValue!)
+                    gistId = url?.lastPathComponent
+                    
+                } else {
+                    
+                    gistId = metadataObj.stringValue
+                    
+                }
+                
+                //TODO: CONNECTION
+                
+            }
+        }
+    }
     
     //MARK: - • PUBLIC METHODS
     
@@ -117,61 +154,59 @@ class CameraQR_VC: UIViewController, AVCaptureMetadataOutputObjectsDelegate {
     //MARK: - • PRIVATE METHODS (INTERNAL USE ONLY)
     private func setupLayout() {
         
-        var width = previewView.frame.size.width * 0.8;
-        var height = width;
+        //creating the target on screen
+        let width = previewView.frame.size.width * 0.8;
+        let height = width;
         rectScanSizeWidthConstraint.constant = width;
         rectScanSizeHeightConstraint.constant = height;
         self.view.layoutIfNeeded()
         
-        var extHeight:CGFloat = previewView.frame.size.height;
-        var extWidth:CGFloat = previewView.frame.size.width;
-        var intHeight:CGFloat =  height;
-        var intWidth:CGFloat =  width;
+        let extHeight:CGFloat = previewView.frame.size.height;
+        let extWidth:CGFloat = previewView.frame.size.width;
+        let intHeight:CGFloat =  height;
+        let intWidth:CGFloat =  width;
         
-        var externalPath = UIBezierPath.init(roundedRect: CGRect.init(x: -(extWidth-intWidth)/2.0, y: -(extHeight-intHeight)/2.0, width: extWidth, height: extHeight), cornerRadius: 0)
-        var internalPath = UIBezierPath.init(roundedRect: CGRect.init(x: 0, y: 0, width: intWidth, height: intHeight), cornerRadius: 0)
+        let externalPath = UIBezierPath.init(roundedRect: CGRect.init(x: -(extWidth-intWidth)/2.0, y: -(extHeight-intHeight)/2.0, width: extWidth, height: extHeight), cornerRadius: 0)
+        let internalPath = UIBezierPath.init(roundedRect: CGRect.init(x: 0, y: 0, width: intWidth, height: intHeight), cornerRadius: 0)
         externalPath.append(internalPath)
         externalPath.usesEvenOddFillRule = true
         
-        var fillLayer = CAShapeLayer.init()
+        let fillLayer = CAShapeLayer.init()
         fillLayer.path = externalPath.cgPath
         fillLayer.fillRule = CAShapeLayerFillRule.evenOdd
         fillLayer.fillColor = UIColor.black.cgColor
         fillLayer.opacity = 0.5
         viewOfInterest.layer .addSublayer(fillLayer)
         
-        var borderPath = UIBezierPath()
-        //TODO: AQUI
+        let borderPath = UIBezierPath()
         
-//        borderPath.move(to: CGPoint.)
+        //TOP LEFT
+        borderPath.move(to: CGPoint(x: 1, y: 25))
+        borderPath.addLine(to: CGPoint(x: 1, y: 1))
+        borderPath.addLine(to: CGPoint(x: 25, y: 1))
         
+        //TOP RIGHT
+        borderPath.move(to: CGPoint(x: intWidth - 26, y: 1))
+        borderPath.addLine(to: CGPoint(x: intWidth - 1, y: 1))
+        borderPath.addLine(to: CGPoint(x: intWidth - 1, y: 25))
         
-//        UIBezierPath* borderPath = [UIBezierPath bezierPath];
-//
-//        //TOP LEFT
-//        [borderPath moveToPoint:CGPointMake(1, 25)];
-//        [borderPath addLineToPoint:CGPointMake(1, 1)];
-//        [borderPath addLineToPoint:CGPointMake(25, 1)];
-//        //TOP RIGHT
-//        [borderPath moveToPoint:CGPointMake(intWidth - 26, 1)];
-//        [borderPath addLineToPoint:CGPointMake(intWidth - 1, 1)];
-//        [borderPath addLineToPoint:CGPointMake(intWidth - 1, 25)];
-//        //BOTTOM LEFT
-//        [borderPath moveToPoint:CGPointMake(1, intHeight - 26)];
-//        [borderPath addLineToPoint:CGPointMake(1, intHeight - 1)];
-//        [borderPath addLineToPoint:CGPointMake(25, intHeight - 1)];
-//        //BOTTOM RIGHT
-//        [borderPath moveToPoint:CGPointMake(intWidth - 26, intHeight - 1)];
-//        [borderPath addLineToPoint:CGPointMake(intWidth - 1, intHeight - 1)];
-//        [borderPath addLineToPoint:CGPointMake(intWidth - 1, intHeight - 26)];
-//
-//        CAShapeLayer *pathLayer = [CAShapeLayer layer];
-//        pathLayer.path = borderPath.CGPath;
-//        pathLayer.strokeColor = AppD.styleManager.colorPalette.backgroundNormal.CGColor;
-//        pathLayer.lineWidth = 5.0f;
-//        pathLayer.fillColor = nil;
-//
-//        [viewOfInterest.layer addSublayer:pathLayer];
+        //BOTTOM LEFT
+        borderPath.move(to: CGPoint(x: 1, y: intHeight - 26))
+        borderPath.addLine(to: CGPoint(x: 1, y: intHeight - 1))
+        borderPath.addLine(to: CGPoint(x: 25, y: intHeight - 1))
+        
+        //TOPBOTTOMRIGHT
+        borderPath.move(to: CGPoint(x: intWidth - 26, y: intHeight - 1))
+        borderPath.addLine(to: CGPoint(x: intWidth - 1, y: intHeight - 1))
+        borderPath.addLine(to: CGPoint(x: intWidth - 1, y: intHeight - 26))
+        
+        let pathLayer = CAShapeLayer()
+        pathLayer.path = borderPath.cgPath
+        pathLayer.strokeColor = UIColor.red.cgColor
+        pathLayer.lineWidth = 5.0
+        pathLayer.fillColor = nil
+        
+        viewOfInterest.layer.addSublayer(pathLayer)
         
     }
     private func checkCamPermission(){
